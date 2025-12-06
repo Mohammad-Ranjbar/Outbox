@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  my-app:
+    build: "./.docker"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: php artisan serve --host=0.0.0.0 --port=8000  # Explicit command
+    networks:
+      my-network:
+        ipv4_address: 172.0.70.10
+
+  buggregator:
+    container_name: my-buggregator
+    image: ghcr.io/buggregator/server:latest
+    ports:
+      - "8001:8000"
+    networks:
+      my-network:
+        ipv4_address: 172.0.70.20
+
+  reverse-proxy:
+    container_name: my-reverse-proxy
+    image: traefik:v2.9
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--api.insecure=true"
+      - "--log.level=INFO"
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      my-network:
+        ipv4_address: 172.0.70.30
+
+networks:
+  my-network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.0.70.0/24
